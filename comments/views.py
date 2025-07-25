@@ -8,11 +8,13 @@ class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-
 class LikeViewSet(viewsets.ModelViewSet):
     queryset = Like.objects.all()
     serializer_class = LikeSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class FavoriteViewSet(viewsets.ModelViewSet):
@@ -20,11 +22,9 @@ class FavoriteViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Swagger schema generatsiya uchun tekshirish
         if getattr(self, 'swagger_fake_view', False):
             return Favorite.objects.none()
 
-        # Foydalanuvchi autentifikatsiya qilinganmi tekshirish
         if not self.request.user.is_authenticated:
             return Favorite.objects.none()
 

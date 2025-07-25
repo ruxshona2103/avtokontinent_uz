@@ -1,39 +1,29 @@
-from rest_framework import generics, status
+from rest_framework import generics, permissions
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import User
-from .serializers import UserRegisterSerializer, UserLoginSerializer, UserDetailSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
+from .models import CustomUser
+from .serializers import UserSerializer
+from rest_framework import viewsets
+from rest_framework.decorators import action
 
-def get_tokens_for_user(user):
-    refresh = RefreshToken.for_user(user)
-    return {
-        'refresh': str(refresh),
-        'access': str(refresh.access_token),
-    }
-
-class RegisterAPIView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    permission_classes = [AllowAny]
-    serializer_class = UserRegisterSerializer
-
-class LoginAPIView(generics.GenericAPIView):
-    serializer_class = UserLoginSerializer
-
-    def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
-        tokens = get_tokens_for_user(user)
-        return Response({
-            'tokens': tokens,
-            'user': UserDetailSerializer(user).data
-        })
-
-class UserDetailAPIView(generics.RetrieveAPIView):
-    serializer_class = UserDetailSerializer
-    permission_classes = [IsAuthenticated]
+class UserProfileView(generics.RetrieveAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
         return self.request.user
 
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = CustomUser.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=False, methods=['get'])
+    def profile(self, request):
+        """Foydalanuvchi o'z profilini oladi"""
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
+
+    def get_queryset(self):
+        # Faqat o'z ma'lumotlarini ko'rishi mumkin
+        return CustomUser.objects.filter(id=self.request.user.id)

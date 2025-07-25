@@ -1,37 +1,58 @@
 from rest_framework import serializers
-from .models import Order, OrderItem
-from products.serializers import ProductSerializer
+from .models import CartItem, Product, OrderItem, Order
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CartItem
+        fields = ['id', 'product', 'quantity', 'created_at']
+
 
 class OrderItemSerializer(serializers.ModelSerializer):
-    product = ProductSerializer(read_only=True)
+    product_name = serializers.CharField(source='product.name', read_only=True)
 
     class Meta:
         model = OrderItem
-        fields = ['product', 'quantity']
+        fields = ['id', 'product', 'product_name', 'quantity', 'price']
 
-class OrderCreateItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrderItem
-        fields = ['product', 'quantity']
-
-class OrderSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True, read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
-
-    class Meta:
-        model = Order
-        fields = ['id', 'full_name', 'phone_number', 'address', 'status', 'status_display', 'created_at', 'payment_image', 'items']
 
 class OrderCreateSerializer(serializers.ModelSerializer):
-    items = OrderCreateItemSerializer(many=True)
+    product_id = serializers.IntegerField(write_only=True)
+    quantity = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = Order
-        fields = ['full_name', 'phone_number', 'address', 'payment_image', 'items']
+        fields = ['id', 'full_name', 'address', 'phone_number', 'product_id', 'quantity']
 
     def create(self, validated_data):
-        items_data = validated_data.pop('items')
-        order = Order.objects.create(user=self.context['request'].user, **validated_data)
-        for item_data in items_data:
-            OrderItem.objects.create(order=order, **item_data)
+        request = self.context.get('request')
+        product_id = validated_data.pop('product_id')
+        quantity = validated_data.pop('quantity')
+
+        product = Product.objects.get(id=product_id)
+
+        user = request.user if request and request.user.is_authenticated else None
+
+        order = Order.objects.create(
+            user=user,
+            full_name=validated_data['full_name'],
+            address=validated_data['address'],
+            phone_number=validated_data['phone_number']
+        )
+
+        OrderItem.objects.create(
+            order=order,
+            product=product,
+            quantity=quantity,
+            price=product.price_usd
+        )
+
         return order
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(source='orderitem_set', many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'full_name', 'address', 'phone_number', 'created_at', 'status', 'is_paid', 'items']
