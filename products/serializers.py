@@ -1,4 +1,6 @@
 from rest_framework import serializers
+
+from comments.serializers import CommentSerializer
 from .models import Product, ProductImage, CarModel, Brand
 
 
@@ -11,6 +13,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     price_uzs = serializers.SerializerMethodField()
     images = ProductImageSerializer(many=True, read_only=True)
+    comments = CommentSerializer(many=True, read_only=True)
 
     uploaded_images = serializers.ListField(
         child=serializers.ImageField(),
@@ -25,9 +28,10 @@ class ProductSerializer(serializers.ModelSerializer):
             'id', 'name', 'brand', 'car_model',
             'price_usd', 'price_uzs', 'description',
             'youtube_link', 'is_active',
-            'images', 'uploaded_images'
+            'images', 'uploaded_images',
+            "comments"
         ]
-        read_only_fields = ['id', 'price_uzs', 'images']
+        read_only_fields = ['id', 'price_uzs', 'images', "comments"]
 
     def get_price_uzs(self, obj):
         return obj.price_uzs

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Comment, Like, Favorite, Rating
 
+
 class CommentSerializer(serializers.ModelSerializer):
     like_count = serializers.IntegerField(source='likes.count', read_only=True)
 
